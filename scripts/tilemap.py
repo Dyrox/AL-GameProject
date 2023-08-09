@@ -10,7 +10,6 @@ class Tilemap:
         self.tilemap = {}
         self.offgrid_tiles = []
 
-
         for i in range(10):
             self.tilemap[str(3+i)+';10'] = {'type': 'grass', 'variant': 1, 'pos': (3+i,10)}
             self.tilemap['10;'+str(5+i)] = {'type': 'stone', 'variant': 1, 'pos': (10,5+i)}
@@ -34,15 +33,21 @@ class Tilemap:
         return rects
 
     def render(self, surf, offset=[0,0]):
+
+        for x in range(int(offset[0]//self.tile_size),int((offset[0]+surf.get_width())//self.tile_size+1)):
+            for y in range(int(offset[1]//self.tile_size),int((offset[1]+surf.get_height())//self.tile_size+1)):
+                loc = f'{x};{y}'
+                if loc in self.tilemap:
+                    tile = self.tilemap[loc]
+                    tile_image = self.game.assets[tile['type']][tile['variant']]
+                    tile_position = (tile['pos'][0] * self.tile_size - offset[0], tile['pos'][1] * self.tile_size - offset[1])
+                    surf.blit(tile_image, tile_position)
+            
+            
+                    
         
         for tile in self.offgrid_tiles:
             tile_image = self.game.assets[tile['type']][tile['variant']]
             surf.blit(tile_image, (tile['pos'][0]-offset[0], tile['pos'][1]-offset[1]))
-            
-        for loc, tile in self.tilemap.items():
-            tile_image = self.game.assets[tile['type']][tile['variant']]
-            
-            tile_position = (tile['pos'][0] * self.tile_size - offset[0], tile['pos'][1] * self.tile_size - offset[1])
-            surf.blit(tile_image, tile_position)
-        
+
         
