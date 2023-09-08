@@ -14,16 +14,16 @@ from scripts.spark import Spark
 RUNNING_FPS = 60
 DISPLAYING_FPS = 120
 
+
 class Game:
     def __init__(self):
         pygame.init()
-        pygame.display.set_caption('My Game')
 
+        pygame.display.set_caption('My game')
         window_size = (1280,720)
         self.screen = pygame.display.set_mode(window_size)
         self.display = pygame.Surface((640,360))
-        # self.display = pygame.Surface((1280,720))
-        
+
         self.clock = pygame.time.Clock()
         
         self.movement = [False, False]
@@ -34,7 +34,7 @@ class Game:
             'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
             'player': load_image('entities/player.png'),
-            'background': load_image('genshin-background.png'),
+            'background': load_image('background.png'),
             'clouds': load_images('clouds'),
             'enemy/idle': Animation(load_images('entities/enemy/idle'), img_dur=6),
             'enemy/run': Animation(load_images('entities/enemy/run'), img_dur=4),
@@ -55,7 +55,9 @@ class Game:
         
         self.tilemap = Tilemap(self, tile_size=16)
         
-        self.load_level('0')
+        self.load_level(0)
+        
+        self.screenshake = 0
         
     def load_level(self, map_id):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
@@ -68,6 +70,7 @@ class Game:
         for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
             if spawner['variant'] == 0:
                 self.player.pos = spawner['pos']
+                self.player.air_time = 0
             else:
                 self.enemies.append(Enemy(self, spawner['pos'], (8, 15)))
             
@@ -82,10 +85,12 @@ class Game:
         while True:
             self.display.blit(self.assets['background'], (0, 0))
             
+            self.screenshake = max(0, self.screenshake - 1)
+            
             if self.dead:
                 self.dead += 1
                 if self.dead > 40:
-                    self.load_level('0')
+                    self.load_level(0)
             
             self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) // 30
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) // 30
@@ -127,6 +132,7 @@ class Game:
                     if self.player.rect().collidepoint(projectile[0]):
                         self.projectiles.remove(projectile)
                         self.dead += 1
+                        self.screenshake = max(16, self.screenshake)
                         for i in range(30):
                             angle = random.random() * math.pi * 2
                             speed = random.random() * 5
@@ -166,7 +172,8 @@ class Game:
                     if event.key == pygame.K_RIGHT:
                         self.movement[1] = False
             
-            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
+            screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
+            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), screenshake_offset)
             pygame.display.update()
             self.clock.tick(RUNNING_FPS)
 
