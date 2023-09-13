@@ -5,6 +5,7 @@ import pygame
 BASE_IMG_PATH = 'data/images/'
 
 def load_image(path):
+        
     img = pygame.image.load(BASE_IMG_PATH + path).convert()
     img.set_colorkey((0, 0, 0))
     return img
@@ -36,3 +37,14 @@ class Animation:
     
     def img(self):
         return self.images[int(self.frame / self.img_duration)]
+    
+def APPLEFUCKYOU():
+    for dirpath, dirnames, filenames in os.walk('.'):
+        if '.DS_Store' in filenames:
+            file_path = os.path.join(dirpath, '.DS_Store')
+            try:
+                os.remove(file_path)
+                print(f"Removed {file_path}")
+            except Exception as e:
+                print(f"Error removing {file_path}: {e}")
+

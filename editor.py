@@ -1,13 +1,12 @@
 import sys
-
 import pygame
+
+
 
 from scripts.utils import load_images
 from scripts.tilemap import Tilemap
 
 RENDER_SCALE = 2.0
-
-
 RUNNING_FPS = 60
 DISPLAYING_FPS = 120
 
@@ -20,7 +19,6 @@ class Editor:
         window_size = (1280,720)
         self.screen = pygame.display.set_mode(window_size)
         self.display = pygame.Surface((640,360))
-        # self.display = pygame.Surface((1280,720))
         self.clock = pygame.time.Clock() 
         
         self.assets = {
@@ -35,10 +33,16 @@ class Editor:
         
         self.tilemap = Tilemap(self, tile_size=16)
         
-        try:
-            self.tilemap.load('map.json')
-        except FileNotFoundError:
-            pass
+        # Load the tilemap
+        self.file_path = 'data/maps/2.json'
+        if self.file_path:
+            try:
+                self.tilemap.load(self.file_path)
+            except FileNotFoundError:
+                pass
+        else:
+            print("No file selected!")
+            sys.exit()
         
         self.scroll = [0, 0]
         
@@ -52,6 +56,8 @@ class Editor:
         self.ongrid = True
         
     def run(self):
+
+
         while True:
             self.display.fill((0, 0, 0))
             
@@ -131,7 +137,7 @@ class Editor:
                     if event.key == pygame.K_t:
                         self.tilemap.autotile()
                     if event.key == pygame.K_o:
-                        self.tilemap.save('map.json')
+                        self.tilemap.save(self.file_path)
                     if event.key == pygame.K_LSHIFT:
                         self.shift = True
                 if event.type == pygame.KEYUP:
