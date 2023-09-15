@@ -16,6 +16,7 @@ AUTOTILE_MAP = {
 
 NEIGHBOR_OFFSETS = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)]
 PHYSICS_TILES = {'grass', 'stone'}
+PICKUP_TILES = {'heart','coin'}
 AUTOTILE_TYPES = {'grass', 'stone'}
 
 class Tilemap:
@@ -42,7 +43,6 @@ class Tilemap:
                 matches[-1]['pos'][1] *= self.tile_size
                 if not keep:
                     del self.tilemap[loc]
-        
         return matches
     
     def tiles_around(self, pos):
@@ -80,6 +80,12 @@ class Tilemap:
             if tile['type'] in PHYSICS_TILES:
                 rects.append(pygame.Rect(tile['pos'][0] * self.tile_size, tile['pos'][1] * self.tile_size, self.tile_size, self.tile_size))
         return rects
+    
+    def pickup_check(self, pos):
+        tile_loc = str(int(pos[0] // self.tile_size)) + ';' + str(int(pos[1] // self.tile_size))
+        if tile_loc in self.tilemap:
+            if self.tilemap[tile_loc]['type'] in PICKUP_TILES:
+                return self.tilemap[tile_loc]
     
     def autotile(self):
         for loc in self.tilemap:

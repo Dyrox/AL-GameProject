@@ -2,6 +2,7 @@ import sys
 import math
 import random
 import os
+import datetime
 
 import pygame
 
@@ -27,15 +28,22 @@ class Game:
         pygame.init()
 
         APPLEFUCKYOU()
+        self.x = 0
 
         pygame.display.set_caption('My game')
-        window_size = (1280,720)
-        self.screen = pygame.display.set_mode(window_size)
-        self.display = pygame.Surface((640,360))
+        self.window_size = (1280,720)
+        self.screen = pygame.display.set_mode(self.window_size)
+        self.display = pygame.Surface((640,360), pygame.SRCALPHA)
+        self.display_WIDTH = self.display.get_width()
+        self.display_HEIGHT = self.display.get_height()
+        self.display_2 = pygame.Surface((640,360))
+
 
         self.clock = pygame.time.Clock()
         
         self.movement = [False, False]
+
+        self.font = pygame.font.Font('minecraft.otf', 20)
         
         self.assets = {
             'decor': load_images('tiles/decor'),
@@ -56,6 +64,9 @@ class Game:
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
+            'arrow_keys_diagram': load_image('上下左右.png'),
+            'x_key_diagram': load_image('keyboard_X.png'),
+            'hearts': Animation(load_images('objects/hearts'), img_dur=6),
         }
         
         self.clouds = Clouds(self.assets['clouds'], count=16)
@@ -68,7 +79,7 @@ class Game:
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
         }
 
-        
+        self.HP = 1
         self.sfx['jump'].set_volume(0.7)
         self.sfx['dash'].set_volume(0.3)
         self.sfx['shoot'].set_volume(0.4)
@@ -141,7 +152,7 @@ class Game:
             elif abs(self.player.dashing) < 50:
                 if self.player.rect().collidepoint(projectile[0]):
                     self.projectiles.remove(projectile)
-                    self.dead += 1
+                    self.HP -= 1
                     self.sfx['hit'].play()
                     self.screenshake = max(16, self.screenshake)
                     for i in range(30):
@@ -191,6 +202,11 @@ class Game:
             enemy.render(self.display, offset=self.render_scroll)
             if kill:
                 self.enemies.remove(enemy)
+    def restart_level(self):
+        self.load_level(self.level)
+        self.reset_movement()
+        self.reset_player_status()
+        self.main_game()
 
     def check_level_loading(self):
         if not len(self.enemies):
@@ -200,13 +216,19 @@ class Game:
                 self.load_level(self.level)
         if self.transition <0:
             self.transition +=1
-        
+        HP_text = self.font.render(f'HP: {self.HP}',False,'white')
+
+        self.display.blit(HP_text,(self.display_WIDTH//20*18,self.display_HEIGHT//20*18+self.menu_float))
+
+        if self.HP <= 0:
+            self.dead += 1
         if self.dead:
             self.dead += 1
             if self.dead >= 10:
                 self.transition = min(30, self.transition)
             if self.dead > 40:
-                self.load_level(self.level)
+
+                self.restart_level()
 
         if self.transition:
             transition_surf = pygame.Surface(self.display.get_size())
@@ -225,10 +247,31 @@ class Game:
         self.cloud_leaf_render_update()
         self.entity_render_update()
         self.tilemap.render(self.display, offset=self.render_scroll)
+        self.refresh_menu_float()
+        if self.level == 0:
+            self.display_welcome()
 
         self.check_level_loading()
 
 
+    def reset_movement(self):
+        self.movement[0] = False
+               
+        self.movement[1] = False
+    def display_welcome(self):
+        arrow_keys = self.assets['arrow_keys_diagram']
+        arrow_keys = pygame.transform.scale(arrow_keys,(arrow_keys.get_width()*2,arrow_keys.get_height()*2))
+        
+        self.display.blit(arrow_keys,(self.display.get_width()//2-arrow_keys.get_width()//2,50+self.menu_float))
+        
+        self.draw_text('USE ARROW KEYS TO MOVE', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (52, 52+self.menu_float))
+        self.draw_text('USE ARROW KEYS TO MOVE', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (50, 50+self.menu_float))
+        keyboard_x = self.assets['x_key_diagram']
+        keyboard_x = pygame.transform.scale(keyboard_x,(keyboard_x.get_width()*2,keyboard_x.get_height()*2))
+        self.display.blit(keyboard_x,(self.display.get_width()/4*3-arrow_keys.get_width()//2,50+self.menu_float))
+        self.draw_text('[X] TO DASH', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (self.display.get_width()/4*3+2, 52+self.menu_float))
+        self.draw_text('[X] TO DASH', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (self.display.get_width()/4*3, 50+self.menu_float))
+        
     def main_game(self):
         
         while True:
@@ -248,6 +291,7 @@ class Game:
                         self.player.dash()
                     if event.key == pygame.K_ESCAPE:
                         print('menu triggered')
+                        self.blurred = False
                         self.ingame_menu()
 
                 if event.type == pygame.KEYUP:
@@ -261,8 +305,13 @@ class Game:
             self.EVERYTHING_render_update()
             
             
+            
+            
+
+            
 
 
+            
             self.screenshake = max(0, self.screenshake - 1)
             self.screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
@@ -272,26 +321,119 @@ class Game:
             
             self.clock.tick(RUNNING_FPS)
 
+    def draw_buttons(self):
+        button_width = 150
+        button_height = 50
+        button_gap = 10
+        start_y = 100
+
+        for index, button_text in enumerate(self.menu_buttons):
+            button_rect = pygame.Rect((self.display.get_width() - button_width) // 2, start_y + index * (button_height + button_gap) + self.menu_float, button_width, button_height)
+            
+            # Highlight the button if it's selected
+            if index == self.button_selector:
+                pygame.draw.rect(self.display, (255, 255, 0), button_rect)
+            else:
+                pygame.draw.rect(self.display, (255, 255, 255), button_rect)
+
+            # Draw button text
+            text_surf = pygame.font.Font('minecraft.otf', 20).render(button_text, True, (0, 0, 0))
+            text_rect = text_surf.get_rect(center=button_rect.center)
+            self.display.blit(text_surf, text_rect)
+
+    def help_page(self):
+        pass
+    def refresh_menu_float(self):
+        self.x += 0.05
+        self.x %= math.pi * 2
+        self.menu_float = 5*math.sin(self.x)
+
+    def reset_player_status(self):
+        self.HP = 1
+
     def ingame_menu(self):
+
+
+        self.button_selector = 0
+        self.menu_buttons = ['Resume', 'Restart', 'Options', 'Main Menu']
+  
         
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+               
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         print('game resumed')
+                        self.reset_movement()
                         self.main_game()
-                        
-            
-            self.display.blit(self.assets['background'], (0, 0))
+                    if event.key == pygame.K_DOWN:
+                        self.sfx['jump'].play()
+                        self.button_selector += 1
+                        self.button_selector %= len(self.menu_buttons)
+                    if event.key == pygame.K_UP:
+                        self.sfx['jump'].play()
+                        self.button_selector -= 1
+                        if self.button_selector < 0:
+                            self.button_selector = len(self.menu_buttons)-1
+                        self.button_selector %= len(self.menu_buttons)
 
-            self.draw_text('Paused', pygame.font.Font('minecraft.otf', 50), 'white', self.display, (50, 50))
+
+                    if event.key == pygame.K_RETURN:
+                        if self.menu_buttons[self.button_selector] == "Resume":
+                            self.reset_movement()
+                            self.main_game()
+                        elif self.menu_buttons[self.button_selector] == "Restart":
+                            self.restart_level()
+                            
+
+                        elif self.menu_buttons[self.button_selector] == "Options":
+                            # Implement the Options functionality here
+                            pass
+                        elif self.menu_buttons[self.button_selector] == "Main Menu":
+                            # Implement the Main Menu functionality here
+                            pass
+
             
-            self.draw_text('Press [ESC] to go back to game', pygame.font.Font('minecraft.otf', 50), 'white', self.display, (50, 150))
+
+
+
+            if not self.blurred:
+                pygame.image.save(self.display, 'screenshot.png')
+                OriImage = Image.open('screenshot.png')
+                blurImage = OriImage.filter(ImageFilter.GaussianBlur(2.5))
+                #make blurimage darker
+                enhancer = ImageEnhance.Brightness(blurImage)
+                blurImage = enhancer.enhance(0.7)
+                blurImage.save('simBlurImage.png')
+
+                blurImageBG = pygame.image.load('simBlurImage.png')
+                self.blurred = True
+            
+            self.display.blit(blurImageBG, [0, 0])
+
+            print(f'{self.button_selector} is selected')
+
+            self.mouse_pos = pygame.mouse.get_pos()
+            self.mouse_x = self.mouse_pos[0]//2
+            self.mouse_y = self.mouse_pos[1]//2
+
+            
+            self.refresh_menu_float()
+
+            
+            self.draw_buttons()
+            self.draw_text('Paused', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (50, 50+self.menu_float))
+            #display this image onto display, assets/keyboard_ESC.png, also 2x bigger
+            self.display.blit(pygame.transform.scale(pygame.image.load('assets/keyboard_ESC.png'), (int(2*pygame.image.load('assets/keyboard_ESC.png').get_width()), int(2*pygame.image.load('assets/keyboard_ESC.png').get_height()))), (365, 50+self.menu_float))
+            
+            self.draw_text('Press      to go back to game', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (300, 50+self.menu_float))
+            pygame.draw.circle(self.display, (255, 0, 0), (self.mouse_x, self.mouse_y), 5)
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
             pygame.display.update()
             self.clock.tick(RUNNING_FPS)
 
+    
 Game().main_game()
