@@ -9,25 +9,25 @@ import pygame
 from PIL import Image, ImageFilter, ImageEnhance
 
 
-from scripts.utils import load_image, load_images, Animation, APPLEFUCKYOU
+from scripts.utils import load_image, load_images, Animation, APPLE_FILE_CLEAR, ease_out_quad
 from scripts.entities import PhysicsEntity, Player, Enemy
 from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
 from scripts.particle import Particle
 from scripts.spark import Spark
+from scripts.object import ObjectAnimation
 
 RUNNING_FPS = 60
 DISPLAYING_FPS = 120
 
 import os
 
-    
 
 class Game:
     def __init__(self):
         pygame.init()
 
-        APPLEFUCKYOU()
+        APPLE_FILE_CLEAR()
         self.x = 0
 
         pygame.display.set_caption('My game')
@@ -37,6 +37,14 @@ class Game:
         self.display_WIDTH = self.display.get_width()
         self.display_HEIGHT = self.display.get_height()
         self.display_2 = pygame.Surface((640,360))
+
+        self.heart_animations = []
+        self.total_time = 0
+        self.current_level_time = 0
+        self.show_status_menu = False
+        self.debug_menu_position = -100  # Start off-screen (assuming it slides in from the left)
+        self.debug_menu_target_position = 0
+
 
 
         self.clock = pygame.time.Clock()
@@ -65,10 +73,24 @@ class Game:
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
             'arrow_keys_diagram': load_image('上下左右.png'),
-            'x_key_diagram': load_image('keyboard_X.png'),
-            'hearts': Animation(load_images('objects/hearts'), img_dur=6),
+            'x_key_diagram': load_image('objects/keyboard_X.png'),
+            'enemy_head': load_image('objects/enemy_head.png'),
+            'e_key_diagram': load_image('objects/keyboard_E.png'),
+            
         }
-        
+
+        self.raw_assets = {
+            'hearts': load_images('objects/hearts'),
+            'dash_UI_icon': pygame.image.load('data/images/objects/dash_UI_icon.png').convert_alpha(),
+            'jump_UI_icon': pygame.image.load('data/images/objects/jump_UI_icon.png').convert_alpha(),
+            'stopwatch': pygame.image.load('data/images/objects/stopwatch.png').convert_alpha(),
+            'status_menu': pygame.image.load('data/images/objects/status_menu.png').convert_alpha(),
+
+            }
+            
+
+
+
         self.clouds = Clouds(self.assets['clouds'], count=16)
 
         self.sfx = {
@@ -79,7 +101,7 @@ class Game:
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
         }
 
-        self.HP = 1
+        self.HP = 3
         self.sfx['jump'].set_volume(0.7)
         self.sfx['dash'].set_volume(0.3)
         self.sfx['shoot'].set_volume(0.4)
@@ -103,6 +125,11 @@ class Game:
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play(-1)
     
+        self.keyboard_x = self.assets['x_key_diagram']
+
+        for i in range(self.HP):
+            pos = (i * (self.raw_assets['hearts'][0].get_width()*1.5) + 20, self.display_HEIGHT//15)  # Change 32 and 10 accordingly
+            self.heart_animations.append(ObjectAnimation(pos, self.raw_assets['hearts']))
 
 
     def draw_text(self, text, font, color, surface, pos):
@@ -202,23 +229,49 @@ class Game:
             enemy.render(self.display, offset=self.render_scroll)
             if kill:
                 self.enemies.remove(enemy)
+
+    def reset_current_level_timer(self):
+        self.current_level_time = 0
+
     def restart_level(self):
         self.load_level(self.level)
         self.reset_movement()
         self.reset_player_status()
+        self.reset_current_level_timer()
         self.main_game()
+
+
+    def draw_hearts(self):
+        for heart in self.heart_animations[:self.HP]:
+            heart.draw(self.display)
+
+
+    def save_global_time(self):
+        self.total_time += self.current_level_time
+        self.current_level_time = 0
 
     def check_level_loading(self):
         if not len(self.enemies):
+            
+
             self.transition +=1
             if self.transition >30:
-                self.level = min(self.level+1,len(os.listdir('data/maps')))
-                self.load_level(self.level)
+                self.level +=1
+                self.save_global_time()
+                if self.level == len(os.listdir('data/maps')):
+                    self.game_end()
+                else:
+                    self.load_level(self.level)
+                    
+                
+                
+                
         if self.transition <0:
-            self.transition +=1
-        HP_text = self.font.render(f'HP: {self.HP}',False,'white')
+            self.transition +=1        
 
-        self.display.blit(HP_text,(self.display_WIDTH//20*18,self.display_HEIGHT//20*18+self.menu_float))
+        for heart in self.heart_animations[:self.HP]:
+            heart.animate(pygame.time.get_ticks())
+            self.draw_hearts()
 
         if self.HP <= 0:
             self.dead += 1
@@ -237,9 +290,48 @@ class Game:
             self.display.blit(transition_surf, (0,0))
 
 
-        
+    def game_end(self):
+        print(self.total_time)
 
         
+    def running_timer(self):
+        self.current_level_time += 1/RUNNING_FPS
+
+        time_text = str(datetime.timedelta(seconds=round(self.current_level_time, 0)))
+        self.draw_text(time_text, pygame.font.Font('minecraft.otf', 20), 'black', self.display, (self.display_WIDTH//20*16.5-self.raw_assets['stopwatch'].get_width()//2+4, 34+self.menu_float))
+        self.draw_text(time_text, pygame.font.Font('minecraft.otf', 20), 'white', self.display, (self.display_WIDTH//20*16.5-self.raw_assets['stopwatch'].get_width()//2+2, 32+self.menu_float))
+
+        #also display the total time+current level time, in a smaller font, at the top right corner, below the current_level_time timer
+        total_time_text = str(datetime.timedelta(seconds=round(self.total_time+self.current_level_time, 0)))
+        self.draw_text(total_time_text, pygame.font.Font('minecraft.otf', 10), 'black', self.display, (self.display_WIDTH//20*16.5-self.raw_assets['stopwatch'].get_width()//2+3, 53+self.menu_float))
+
+        self.draw_text(total_time_text, pygame.font.Font('minecraft.otf', 10), 'white', self.display, (self.display_WIDTH//20*16.5-self.raw_assets['stopwatch'].get_width()//2+2, 52+self.menu_float))
+
+        
+        self.display.blit(self.raw_assets['stopwatch'], (self.display_WIDTH//20*19-self.raw_assets['stopwatch'].get_width()//2, 20+self.menu_float))
+
+    def show_enemy_count(self):
+        self.display.blit(self.assets['enemy_head'], (self.display_WIDTH//20*1,self.display_HEIGHT//20*4+self.menu_float))
+        self.draw_text(f'x {len(self.enemies)}', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (self.display_WIDTH//20*2.3+2,self.display_HEIGHT//20*4.5+self.menu_float+2))
+        self.draw_text(f'x {len(self.enemies)}', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (self.display_WIDTH//20*2.3,self.display_HEIGHT//20*4.5+self.menu_float))
+
+    def render_status_menu(self):
+        speed = 10
+        if self.show_status_menu:
+            progress = ease_out_quad((self.debug_menu_target_position - self.debug_menu_position) / 100)
+            self.debug_menu_position += speed * progress
+            # Cap the position to the target if it overshoots due to the easing function
+            if self.debug_menu_position > self.debug_menu_target_position:
+                self.debug_menu_position = self.debug_menu_target_position
+        else:
+            progress = ease_out_quad((self.debug_menu_position + 100) / 100)
+            self.debug_menu_position -= speed * progress
+            # Cap the position to -100 if it overshoots due to the easing function
+            if self.debug_menu_position < -100:
+                self.debug_menu_position = -100
+
+        pygame.draw.rect(self.display, (255, 0, 0), (self.debug_menu_position, self.display_HEIGHT/2, 100, 200))
+
     def EVERYTHING_render_update(self):
         self.scroll_update()
         self.projectile_render_update()
@@ -248,10 +340,66 @@ class Game:
         self.entity_render_update()
         self.tilemap.render(self.display, offset=self.render_scroll)
         self.refresh_menu_float()
+        
+        self.render_status_menu()
         if self.level == 0:
             self.display_welcome()
 
+
+        if self.level:
+            self.running_timer()
+            self.show_enemy_count()
+        self.display_CD_block()
+
+
+
+
+
         self.check_level_loading()
+        
+        # print(self.total_time)
+
+    
+
+    def display_CD_block(self):
+        dash_CD = self.player.get_dash_CD()
+        CD_fraction = dash_CD / 60
+
+        big_jump_CD = self.player.get_big_jump_CD()
+        big_jump_CD_fraction = big_jump_CD / 300
+        # print(CD_fraction)
+        # print(big_jump_CD)
+
+
+        BLOCK_SIZE = 32  # For example, adjust this value as needed.
+
+        JUMP_CD_BLOCK = pygame.Surface((BLOCK_SIZE, BLOCK_SIZE * big_jump_CD_fraction))
+        pygame.draw.rect(JUMP_CD_BLOCK, (0, 0, 0), pygame.Rect(0, 0, BLOCK_SIZE, BLOCK_SIZE), )
+
+        DASH_CD_block = pygame.Surface((BLOCK_SIZE, BLOCK_SIZE * CD_fraction))
+        pygame.draw.rect(DASH_CD_block, (0, 0, 0), pygame.Rect(0, 0, BLOCK_SIZE, BLOCK_SIZE), )
+        
+
+        DASH_CD_block.fill((255, 255, 255))  
+        JUMP_CD_BLOCK.fill((255, 255, 255))
+        
+        DASH_CD_block.set_alpha(255)
+        JUMP_CD_BLOCK.set_alpha(255)
+        self.display.blit(self.keyboard_x, (40, self.display_HEIGHT - 40))
+
+        self.display.blit(self.assets['e_key_diagram'], (80+self.assets['e_key_diagram'].get_width(), self.display_HEIGHT - 40))
+
+
+
+        dash_UI_icon = self.raw_assets['dash_UI_icon']
+        jump_UI_icon = self.raw_assets['jump_UI_icon']
+
+        JUMP_CD_BLOCK.blit(jump_UI_icon, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
+
+        DASH_CD_block.blit(dash_UI_icon, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
+
+        self.display.blit(DASH_CD_block, (35, self.display_HEIGHT - 80))
+        self.display.blit(JUMP_CD_BLOCK, (75+self.assets['e_key_diagram'].get_width(), self.display_HEIGHT - 80))
 
 
     def reset_movement(self):
@@ -262,15 +410,15 @@ class Game:
         arrow_keys = self.assets['arrow_keys_diagram']
         arrow_keys = pygame.transform.scale(arrow_keys,(arrow_keys.get_width()*2,arrow_keys.get_height()*2))
         
-        self.display.blit(arrow_keys,(self.display.get_width()//2-arrow_keys.get_width()//2,50+self.menu_float))
+        self.display.blit(arrow_keys,(self.display.get_width()//2-arrow_keys.get_width()//2,60+self.menu_float))
         
-        self.draw_text('USE ARROW KEYS TO MOVE', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (52, 52+self.menu_float))
-        self.draw_text('USE ARROW KEYS TO MOVE', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (50, 50+self.menu_float))
-        keyboard_x = self.assets['x_key_diagram']
-        keyboard_x = pygame.transform.scale(keyboard_x,(keyboard_x.get_width()*2,keyboard_x.get_height()*2))
-        self.display.blit(keyboard_x,(self.display.get_width()/4*3-arrow_keys.get_width()//2,50+self.menu_float))
-        self.draw_text('[X] TO DASH', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (self.display.get_width()/4*3+2, 52+self.menu_float))
-        self.draw_text('[X] TO DASH', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (self.display.get_width()/4*3, 50+self.menu_float))
+        self.draw_text('USE ARROW KEYS TO MOVE', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (52, 62+self.menu_float))
+        self.draw_text('USE ARROW KEYS TO MOVE', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (50, 60+self.menu_float))
+        
+        self.display.blit(self.keyboard_x,(self.display.get_width()/4*3-arrow_keys.get_width()//2,60+self.menu_float))
+        self.draw_text('[X] TO DASH', pygame.font.Font('minecraft.otf', 20), 'black', self.display, (self.display.get_width()/4*3+2, 62+self.menu_float))
+        self.draw_text('[X] TO DASH', pygame.font.Font('minecraft.otf', 20), 'white', self.display, (self.display.get_width()/4*3, 60+self.menu_float))
+
         
     def main_game(self):
         
@@ -290,27 +438,43 @@ class Game:
                     if event.key == pygame.K_x:
                         self.player.dash()
                     if event.key == pygame.K_ESCAPE:
-                        print('menu triggered')
+                        # print('menu triggered')
                         self.blurred = False
                         self.ingame_menu()
+                    if event.key == pygame.K_e:
+                        if self.player.big_jump():
+                            self.sfx['jump'].play()
+                    if event.key == pygame.K_TAB:
+                        self.show_status_menu = not self.show_status_menu
+                        
+
+                        
+                    
+                    if event.key == pygame.K_5:
+                        self.level = 5
+                        self.load_level(self.level)
+                        self.reset_movement()
+                        self.reset_player_status()
+                        self.reset_current_level_timer()
+                        self.main_game()
 
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_LEFT:
                         self.movement[0] = False
                     if event.key == pygame.K_RIGHT:
                         self.movement[1] = False
+
+                
+                
             
 
             self.display.blit(self.assets['background'], (0, 0))
             self.EVERYTHING_render_update()
             
-            
-            
-            
-
-            
 
 
+
+            
             
             self.screenshake = max(0, self.screenshake - 1)
             self.screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
@@ -349,7 +513,7 @@ class Game:
         self.menu_float = 5*math.sin(self.x)
 
     def reset_player_status(self):
-        self.HP = 1
+        self.HP = 3
 
     def ingame_menu(self):
 
@@ -366,7 +530,7 @@ class Game:
                
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        print('game resumed')
+                        # print('game resumed')
                         self.reset_movement()
                         self.main_game()
                     if event.key == pygame.K_DOWN:
@@ -414,7 +578,7 @@ class Game:
             
             self.display.blit(blurImageBG, [0, 0])
 
-            print(f'{self.button_selector} is selected')
+            # print(f'{self.button_selector} is selected')
 
             self.mouse_pos = pygame.mouse.get_pos()
             self.mouse_x = self.mouse_pos[0]//2

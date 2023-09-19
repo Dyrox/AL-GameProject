@@ -137,14 +137,22 @@ class Enemy(PhysicsEntity):
             surf.blit(self.game.assets['gun'], (self.rect().centerx + 4 - offset[0], self.rect().centery - offset[1]))
 
 class Player(PhysicsEntity):
+
+
     def __init__(self, game, pos, size):
         super().__init__(game, 'player', pos, size)
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False
         self.dashing = 0
+        self.big_jump_cd = 0  # Initial cooldown is 0 (available to use)
+        self.big_jump_max_cd = 300  # Example: 5 seconds (assuming 60 frames per second
+    
+    def get_dash_CD(self):
+        return 60 - abs(self.dashing)
     
     def update(self, tilemap, movement=(0, 0)):
+        
         super().update(tilemap, movement=movement)
         
         self.air_time += 1
@@ -153,6 +161,7 @@ class Player(PhysicsEntity):
             if not self.game.dead:
                 self.game.screenshake = max(16, self.game.screenshake)
             self.game.dead += 1
+            self.game.sfx['hit'].play()
         
         if self.collisions['down']:
             self.air_time = 0
@@ -197,11 +206,19 @@ class Player(PhysicsEntity):
             self.velocity[0] = max(self.velocity[0] - 0.1, 0)
         else:
             self.velocity[0] = min(self.velocity[0] + 0.1, 0)
-    
+
+
+        if self.big_jump_cd < self.big_jump_max_cd:
+            self.big_jump_cd += 1
+
     def render(self, surf, offset=(0, 0)):
+        
         if abs(self.dashing) <= 50:
             super().render(surf, offset=offset)
-            
+        
+
+
+
     def jump(self):
         if self.wall_slide:
             if self.flip and self.last_movement[0] < 0:
@@ -230,3 +247,13 @@ class Player(PhysicsEntity):
                 self.dashing = -60
             else:
                 self.dashing = 60
+    def get_big_jump_CD(self):
+        """Return the current cooldown value for the big jump."""
+        return self.big_jump_cd
+
+    #write a big jump function with bigger CD, independent of normal jumps, also anothe function which returns a CD value for the UI
+    def big_jump(self):
+        if self.big_jump_cd == self.big_jump_max_cd:
+            self.velocity[1] = -5  # Bigger upward velocity for a bigger jump
+            self.big_jump_cd = 0  
+        

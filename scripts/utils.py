@@ -38,7 +38,7 @@ class Animation:
     def img(self):
         return self.images[int(self.frame / self.img_duration)]
     
-def APPLEFUCKYOU():
+def APPLE_FILE_CLEAR():
     for dirpath, dirnames, filenames in os.walk('.'):
         if '.DS_Store' in filenames:
             file_path = os.path.join(dirpath, '.DS_Store')
@@ -48,3 +48,6 @@ def APPLEFUCKYOU():
             except Exception as e:
                 print(f"Error removing {file_path}: {e}")
 
+def ease_out_quad(t):
+    """Quadratic easing out - decelerating to zero velocity."""
+    return -t * (t - 2)
