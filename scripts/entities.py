@@ -256,4 +256,6 @@ class Player(PhysicsEntity):
         if self.big_jump_cd == self.big_jump_max_cd:
             self.velocity[1] = -5  # Bigger upward velocity for a bigger jump
             self.big_jump_cd = 0  
+            self.air_time = -150
+
         

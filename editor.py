@@ -34,7 +34,7 @@ class Editor:
         self.tilemap = Tilemap(self, tile_size=16)
         
         # Load the tilemap
-        self.file_path = 'data/maps/1.json'
+        self.file_path = 'data/maps/main_menu_map.json'
         if self.file_path:
             try:
                 self.tilemap.load(self.file_path)
