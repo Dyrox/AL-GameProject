@@ -3,7 +3,7 @@ import math
 import random
 import os
 import datetime
-
+import json
 import pygame
 
 from PIL import Image, ImageFilter, ImageEnhance
@@ -25,7 +25,7 @@ import os
 
 class Game:
     def __init__(self):
-        self.player_name = 'DEV MODE'
+        self.player_name = input('enter your name:')
         pygame.init()
 
         APPLE_FILE_CLEAR()
@@ -82,6 +82,7 @@ class Game:
             'game_logo': load_image('objects/game_logo.png'),
             'in_game_pause_menu_status': pygame.image.load('data/images/objects/in_game_pause_menu_status.png').convert_alpha(),
             'button_selector': load_image('objects/button_selector.png'),
+            'leaderboard': load_image('objects/leaderboard.png')
             
         }
 
@@ -140,13 +141,15 @@ class Game:
         player_box_pos = (100,140)  # Center of the player box
         self.playermodel = ObjectAnimation(player_box_pos, self.raw_assets['menuidleplayer'])
 
-        # In the initialization (__init__ method) of your class
-        self.button_selector_position = 69  # starting position, can change based on your needs
-        self.button_selector_target_position = 69  # will be updated when button changes
-        self.button_selector_speed =7  # the speed of movement, adjust to fit your preference
+        self.button_selector_position = 69  
+        self.button_selector_target_position = 69  
+        self.button_selector_speed =7  
 
        
-
+        #if data/leaderboard.json doesnt exist, create a blank json file
+        if not os.path.exists('data/leaderboard.json'):
+            with open('data/leaderboard.json', 'w') as f:
+                f.write('[]')
 
 
         for i in range(self.HP):
@@ -291,6 +294,7 @@ class Game:
         self.current_level_time = 0
 
     def check_level_loading(self):
+        
         if not len(self.enemies):
             
 
@@ -298,9 +302,11 @@ class Game:
             if self.transition >40:
                 self.level +=1
                 self.save_global_time()
-                if self.level == len(os.listdir('data/maps')):
+                if self.level == len(os.listdir('data/maps'))-1:
+                    print('HOLY SHIT')
                     self.game_end()
                 else:
+                
                     self.load_level(self.level)
                     
                 
@@ -330,7 +336,68 @@ class Game:
 
 
     def game_end(self):
-        print(self.total_time)
+        today = datetime.date.today()
+        current_time = datetime.datetime.now().strftime('%H:%M')
+
+        player_record_entry = {
+            'player name': self.player_name,
+            'total time': round(self.total_time + 5 * self.restart_count + self.player_got_hit_count,1),
+            'raw time': round(self.total_time,5),
+            'got hit count': self.player_got_hit_count,
+            'restart count': self.player_got_hit_count,
+            'completed datetime': f'{today} @ {current_time}'
+        }
+
+        # Proper way to update the JSON file
+        with open('data/leaderboard.json', 'r') as f:
+            try:
+                data = json.load(f)
+            except json.decoder.JSONDecodeError: # In case the file is empty or has invalid JSON format
+                data = []
+
+        data.append(player_record_entry)
+
+        with open('data/leaderboard.json', 'w') as f:
+            json.dump(data, f, indent=4)
+
+
+
+
+
+        
+
+        
+
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                #if enter pressed
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.entire_game_reset()
+                        self.main_menu()
+
+            # print(round(self.total_time,1))
+            # print(self.player_got_hit_count)
+            # print(self.restart_count)
+            # print(self.player_name)
+            
+        
+
+
+
+            #save these five thing into leaderboard.json file
+
+
+
+
+            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
+
+            pygame.display.flip()
+            self.clock.tick(RUNNING_FPS)
 
         
     def running_timer(self):
@@ -780,7 +847,87 @@ class Game:
             pygame.display.update()
             self.clock.tick(RUNNING_FPS)
 
+    def render_leaderboard(self):
+
+
+        leaderboard = self.assets['leaderboard'].copy()
+        if self.menu_buttons[self.button_selector] == "Leaderboard":
+            target = self.leaderboard_target_position
+        else:
+            target = leaderboard.get_width()+300
+        
+
+
+        
+        difference = target - self.leaderboard_position
+        normalized_difference = abs(difference) / leaderboard.get_width()
+
+        # If the normalized difference is out of bounds, correct it
+        if normalized_difference > 1:
+            normalized_difference = 1
+        elif normalized_difference < 0:
+            normalized_difference = 0
+
+        # Calculate progress using the easing function
+        progress = ease_out_quad(normalized_difference)
+
+        if difference > 0:
+            self.leaderboard_position += 13 * progress
+            if self.leaderboard_position > target:
+                self.leaderboard_position = target
+        else:
+            self.leaderboard_position -= 13 * progress
+            if self.leaderboard_position < target:
+                self.leaderboard_position = target
+
+        with open("data/leaderboard.json", "r") as f:
+            data = json.load(f)
+        
+        # 2. Select the Best 9 Entries
+        sorted_data = sorted(data, key=lambda x: x["total time"])[:9]
+
+        # Define a starting position for the entries
+        start_x = 52  # Adjust as needed
+        start_y = 80  # Adjust as needed
+
+        # Define a gap between entries for spacing
+        gap = 16  # Adjust as needed
+
+        # Use a font to render the entries
+        font = pygame.font.Font('minecraft.otf', 10)
+
+        # 3. Display the Entries on the Leaderboard
+        for index, entry in enumerate(sorted_data, 1):  # Start index from 1
+            total_time_seconds = entry['total time']
+            #format the time into minutes and seconds
+            if total_time_seconds >= 60:
+                total_time_formatted = f'{int(total_time_seconds//60)}:{round(total_time_seconds%60,1)}'
+            else:
+                total_time_formatted = total_time_seconds
+
+            text = f"{index}. {entry['player name']} {total_time_formatted}"
+            text_surface = font.render(text, True, (255, 255, 255))  # Render in white color, adjust as needed
+            text_rect = text_surface.get_rect(topleft=(start_x, start_y + index * gap))
+            #add another black shadow layer underneath the text
+            text_surface_shadow = font.render(text, True, (0, 0, 0))
+            text_rect_shadow = text_surface_shadow.get_rect(topleft=(start_x+1, start_y + index * gap+1))
+            leaderboard.blit(text_surface_shadow, text_rect_shadow)
+
+            leaderboard.blit(text_surface, text_rect)
+
+        #
+        
+        # leaderboard.blit()
+        # BLIT IMAGE of LEADERBOARD , on the right-hand side with updated position
+        self.display.blit(leaderboard, (self.leaderboard_position, self.display_HEIGHT // 20 * 1 + self.menu_float))
+
+
     def main_menu(self):
+        self.in_main_menu = True
+
+        self.leaderboard_position = self.assets['leaderboard'].get_width()+self.display_WIDTH
+        self.leaderboard_target_position = self.display_WIDTH // 20 * 15 - self.assets['leaderboard'].get_width() // 2
+
         self.load_level('main_menu_map')
         # Load background image (Make sure you have a `background.jpg` in your assets)
         background = pygame.image.load('data/images/background.png').convert()
@@ -833,6 +980,7 @@ class Game:
             self.display.blit(self.assets['background'], (0, 0))
             self.EVERYTHING_render_update()
             self.refresh_menu_float()
+            self.render_leaderboard()
 
             self.movement[1] = 0.8
 
@@ -840,12 +988,12 @@ class Game:
             
             self.display.blit(self.assets['game_logo'], (self.display_WIDTH//20*1, self.display_HEIGHT//20*1+self.menu_float))  
 
-            #blit a 10px text on the buttom right saying made by Zhizhi Cai 2023
             self.draw_text('Made By Dyrox2333', pygame.font.Font('minecraft.otf', 10), 'black', self.display, (self.display_WIDTH//20*19.5-self.font.size('Made By Dyrox2333')[0]//2+1, self.display_HEIGHT//20*19.5-self.font.size('Made By Dyrox2333')[1]//2+1))
             self.draw_text('Made By Dyrox2333', pygame.font.Font('minecraft.otf', 10), 'white', self.display, (self.display_WIDTH//20*19.5-self.font.size('Made By Dyrox2333')[0]//2, self.display_HEIGHT//20*19.5-self.font.size('Made By Dyrox2333')[1]//2))
             
-
-
+            #BLIT IMAGE ofLEADERBOARD  , on the right hand side
+            
+                
             # Drawing buttons, buttons are on the left column, beneth the game logo, with 50px gap between each button
             button_font = pygame.font.Font('minecraft.otf', 20)
             for idx, button_text in enumerate(self.menu_buttons):

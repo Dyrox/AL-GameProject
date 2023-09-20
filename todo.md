@@ -10,3 +10,12 @@
 - add pickups like coins and hearts
 - add a UI for health and score
 - add a timer
+
+
+
+- fix main menu buttons they are too ugly
+- add a end game screen
+
+- fix the levels, espically level 7
+- add more decorations maybe
+- change existing levels
