@@ -2,6 +2,7 @@ import sys
 import math
 import random
 import os
+import time
 import datetime
 import json
 import pygame
@@ -32,9 +33,13 @@ class Game:
         self.x = 0
 
         pygame.display.set_caption('My game')
-        self.window_size = (1280,720)
+        # self.window_size = (1280,720)
+        self.window_size = (1920,1080)
         self.screen = pygame.display.set_mode(self.window_size)
         self.display = pygame.Surface((640,360), pygame.SRCALPHA)
+        self.show_debug_menu = False
+        self.textflash = 0
+        
         
         self.display_WIDTH = self.display.get_width()
         self.display_HEIGHT = self.display.get_height()
@@ -47,6 +52,13 @@ class Game:
         self.player_got_hit_count = 0
         self.in_main_menu = True
         self.render_scroll=[0,0]
+
+        # Debug variables
+        self.debug_timer = 0
+        self.debug_font = pygame.font.Font(None, 30)
+        self.debug_info_updated = False
+        self.GRANDTOTAL_COUNTER = 0
+
 
 
         self.clock = pygame.time.Clock()
@@ -66,7 +78,7 @@ class Game:
             'enemy/idle': Animation(load_images('entities/enemy/idle'), img_dur=6),
             'enemy/run': Animation(load_images('entities/enemy/run'), img_dur=4),
             'player/idle': Animation(load_images('entities/player/idle'), img_dur=6),
-            'player/run': Animation(load_images('entities/player/run'), img_dur=8),
+            'player/run': Animation(load_images('entities/player/run'), img_dur=7),
             'player/jump': Animation(load_images('entities/player/jump')),
             'player/slide': Animation(load_images('entities/player/slide')),
             'player/wall_slide': Animation(load_images('entities/player/wall_slide')),
@@ -77,12 +89,15 @@ class Game:
             'arrow_keys_diagram': load_image('上下左右.png'),
             'x_key_diagram': load_image('objects/keyboard_X.png'),
             'enemy_head': load_image('objects/enemy_head.png'),
-            'e_key_diagram': load_image('objects/keyboard_E.png'),
+            'e_key_diagram': load_image('objects/keyboard_Z.png'),
             'blurred_background': load_image('blurred_background.png'),
             'game_logo': load_image('objects/game_logo.png'),
             'in_game_pause_menu_status': pygame.image.load('data/images/objects/in_game_pause_menu_status.png').convert_alpha(),
             'button_selector': load_image('objects/button_selector.png'),
-            'leaderboard': load_image('objects/leaderboard.png')
+            'leaderboard': load_image('objects/leaderboard.png'),
+            'main_menu_buttons': pygame.image.load('data/images/objects/main_menu_buttons.png').convert_alpha(),
+            'main_menu_button_selector': load_image('objects/main_menu_button_selector.png').convert_alpha(),
+            'game_end_panel': pygame.image.load('data/images/objects/game_end_panel.png').convert_alpha(),
             
         }
 
@@ -109,6 +124,10 @@ class Game:
             'shoot': pygame.mixer.Sound('data/sfx/shoot.wav'),
             'hit': pygame.mixer.Sound('data/sfx/hit.wav'), 
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
+            'chord1': pygame.mixer.Sound('data/sfx/chord1.wav'),
+            'chord2': pygame.mixer.Sound('data/sfx/chord2.wav'),
+            'chord3': pygame.mixer.Sound('data/sfx/chord3.wav'),
+            'chord4': pygame.mixer.Sound('data/sfx/chord4.wav'),
         }
 
         self.HP = 3
@@ -143,7 +162,11 @@ class Game:
 
         self.button_selector_position = 69  
         self.button_selector_target_position = 69  
-        self.button_selector_speed =7  
+        self.button_selector_speed = 7  
+
+
+        self.end_panel_pos = -self.assets['game_end_panel'].get_height() 
+        self.end_panel_target_pos = (self.display_HEIGHT - self.assets['game_end_panel'].get_height()) // 2
 
        
         #if data/leaderboard.json doesnt exist, create a blank json file
@@ -294,6 +317,17 @@ class Game:
         self.current_level_time = 0
 
     def check_level_loading(self):
+
+
+        if self.level == len(os.listdir('data/maps'))-2 and not len(self.enemies):
+            self.save_global_time()
+            #wait 2 seconds, then go to game_end
+            
+            
+            self.game_finished = True
+            self.game_end()
+            
+
         
         if not len(self.enemies):
             
@@ -301,10 +335,13 @@ class Game:
             self.transition +=1
             if self.transition >40:
                 self.level +=1
+
                 self.save_global_time()
+
                 if self.level == len(os.listdir('data/maps'))-1:
                     print('HOLY SHIT')
-                    self.game_end()
+                
+                    
                 else:
                 
                     self.load_level(self.level)
@@ -335,7 +372,137 @@ class Game:
             self.display.blit(transition_surf, (0,0))
 
 
+    
+    def render_end_game_panel(self):
+
+        game_end_panel = self.assets['game_end_panel'].copy()
+        print('yeah lmao')
+
+
+        
+        target = self.end_panel_target_pos
+        
+        difference =  target - self.end_panel_pos
+        normalized_difference = abs(difference) / game_end_panel.get_width()
+
+        # If the normalized difference is out of bounds, correct it
+        if normalized_difference > 1:
+            normalized_difference = 1
+        elif normalized_difference < 0:
+            normalized_difference = 0
+
+        # Calculate progress using the easing function
+        progress = ease_out_quad(normalized_difference)
+
+        if difference > 0:
+            self.end_panel_pos += 13 * progress
+            if self.end_panel_pos > target:
+                self.leaderboard_position = target
+        else:
+            self.end_panel_pos -= 13 * progress
+            if self.end_panel_pos < target:
+                self.end_panel_pos = target
+
+        render_pos = (self.display_WIDTH//2-game_end_panel.get_width()//2, self.end_panel_pos+self.menu_float)
+
+        #draw text that says extra timef
+        self.draw_text('EXTRA TIME:', pygame.font.Font('minecraft.otf', 20), 'black', game_end_panel, ( 27,  89))
+        self.draw_text('EXTRA TIME:', pygame.font.Font('minecraft.otf', 20), 'white', game_end_panel, ( 26, 88))
+        # self.draw_text(f'Player got hit: {self.player_got_hit_count} -> {self.player_got_hit_count*1}s', pygame.font.Font('minecraft.otf', 10), 'black', game_end_panel, ( 201,  166))
+        self.draw_text(f'Player got hit: {self.player_got_hit_count} -> ', pygame.font.Font('minecraft.otf', 10), 'white', game_end_panel, ( 200,  165))
+        self.draw_text(f'{self.player_got_hit_count*1}s', pygame.font.Font('minecraft.otf', 10), 'red', game_end_panel, ( 200+pygame.font.Font('minecraft.otf', 10).size(f'Player got hit: {self.player_got_hit_count} -> ')[0],  165))
+
+        # Draw arrow image a bit below the text
+        game_end_panel.blit(self.raw_assets['arrows'], ( 200,  + 125))
+
+        # Draw the text "Restart count:" and the associated count, below the arrow image
+        # self.draw_text(f'Restart count: {self.restart_count} -> {self.restart_count*5}s', pygame.font.Font('minecraft.otf', 10), 'black', game_end_panel, (31,  + 166))
+        self.draw_text(f'Restart count: {self.restart_count} -> ', pygame.font.Font('minecraft.otf', 10), 'white', game_end_panel, (30,  + 165))
+        #{self.restart_count*5}s is red
+        self.draw_text(f'{self.restart_count*5}s', pygame.font.Font('minecraft.otf', 10), 'red', game_end_panel, (30+pygame.font.Font('minecraft.otf', 10).size(f'Restart count: {self.restart_count} -> ')[0],  165))
+
+        game_end_panel.blit(self.raw_assets['skeleton'], ( 50,   125))
+
+        #total total time
+        self.draw_text(f'TOTAL TIME:', self.font, 'black', game_end_panel, ( 27,  196))
+        self.draw_text(f'TOTAL TIME:', self.font, 'white', game_end_panel, ( 26,  195))
+
+        self.textflash += 1
+
+        if self.textflash > 60:
+
+            basetime = round(self.total_time,1)
+            #draw a black 
+            self.draw_text(f'{basetime}', self.font, 'black', game_end_panel, ( 27,  227))
+            self.draw_text(f'{basetime}', self.font, 'white', game_end_panel, ( 26,  226))
+
+            
+
+        if self.textflash > 120 :
+            #draw a black 
+
+            self.draw_text(f'+ {self.restart_count*5}', self.font, 'black', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} ')[0]+1,  227))
+            self.draw_text(f'+ {self.restart_count*5}', self.font, 'red', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} ')[0],  226))
+            
+
+        if self.textflash > 180:
+            #draw a black
+            self.draw_text(f'+ {self.player_got_hit_count}', self.font, 'black', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} + {self.restart_count*5} ')[0]+1,  227))
+            self.draw_text(f'+ {self.player_got_hit_count}', self.font, 'red', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} + {self.restart_count*5} ')[0],  226))
+            
+
+        if self.textflash > 240:
+            #add a = sign
+            self.draw_text(f'=', self.font, 'black', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} + {self.restart_count*5} + {self.player_got_hit_count} ')[0]+1,  227))
+
+            self.draw_text(f'=', self.font, 'white', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} + {self.restart_count*5} + {self.player_got_hit_count} ')[0],  226))
+            
+
+        
+        GRANDTOTAL = round(self.total_time + 5 * self.restart_count + self.player_got_hit_count,1)
+        if self.textflash > 300:
+            if GRANDTOTAL - self.GRANDTOTAL_COUNTER>1:
+
+                self.GRANDTOTAL_COUNTER += 1
+            elif GRANDTOTAL - self.GRANDTOTAL_COUNTER <= 1:
+                self.GRANDTOTAL_COUNTER += 0.1
+
+
+            if self.GRANDTOTAL_COUNTER > GRANDTOTAL:
+                self.GRANDTOTAL_COUNTER = GRANDTOTAL
+
+
+            
+            td = datetime.timedelta(seconds=int(self.GRANDTOTAL_COUNTER))
+            fractional_seconds = round(self.GRANDTOTAL_COUNTER % 1, 1)
+            time_formatted =  f"{(td.seconds // 60) % 60:02}:{td.seconds % 60:02}.{int(10*fractional_seconds)}"
+
+            #increment to the grandtotal
+            self.draw_text(f'{time_formatted}', self.font, 'black', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} + {self.restart_count*5} + {self.player_got_hit_count} = ')[0]+1,  227))
+            self.draw_text(f'{time_formatted}', self.font, 'white', game_end_panel, ( 26+self.font.size(f'{round(self.total_time,1)} + {self.restart_count*5} + {self.player_got_hit_count} = ')[0],  226))
+                    
+
+
+
+        #put a flashing text at the buttom of the panel, say PRESS ENTER FOR MAIN MENU
+        
+        # print(self.textflash)
+        if self.textflash % 60 < 30:
+
+            #but the text middled at the buttom of the panel
+            self.draw_text('PRESS ENTER FOR MAIN MENU', self.font, 'black', game_end_panel, (game_end_panel.get_width()//2-self.font.size('PRESS ENTER FOR MAIN MENU')[0]//2+1, game_end_panel.get_height()-49))
+            self.draw_text('PRESS ENTER FOR MAIN MENU', self.font, 'white', game_end_panel, (game_end_panel.get_width()//2-self.font.size('PRESS ENTER FOR MAIN MENU')[0]//2, game_end_panel.get_height()-50))
+                                                                                                                         
+                                                                                                                         
+                                                                                                                         
+
+
+        self.display.blit(game_end_panel, render_pos)
+
+        
+
     def game_end(self):
+        self.screenshot_taken = False
         today = datetime.date.today()
         current_time = datetime.datetime.now().strftime('%H:%M')
 
@@ -360,45 +527,54 @@ class Game:
         with open('data/leaderboard.json', 'w') as f:
             json.dump(data, f, indent=4)
 
-
-
-
-
-        
-
-        
-
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
 
-                #if enter pressed
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         self.entire_game_reset()
                         self.main_menu()
+                        
 
-            # print(round(self.total_time,1))
-            # print(self.player_got_hit_count)
-            # print(self.restart_count)
-            # print(self.player_name)
+
+            if not self.screenshot_taken:
+                if self.pause_menu_position < -490:
+                    pygame.image.save(self.display, 'screenshot.png')
+                OriImage = Image.open('screenshot.png')
+                screenshot_no_blur = pygame.image.load('screenshot.png')
+                blurImage = OriImage.filter(ImageFilter.GaussianBlur(2.5))
+                #make blurimage darker
+                enhancer = ImageEnhance.Brightness(blurImage)
+                blurImage = enhancer.enhance(0.7)
+                blurImage.save('simBlurImage.png')
+                print('screenshot taken')
+
+                blurImageBG = pygame.image.load('simBlurImage.png')
+                self.screenshot_taken = True
             
-        
+
+
+                
+            self.display.blit(screenshot_no_blur, (0, 0))
+            self.refresh_menu_float()
+            self.update_debug_stuff()
+
+            self.render_end_game_panel()
 
 
 
-            #save these five thing into leaderboard.json file
-
-
-
-
-            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
-
-            pygame.display.flip()
+            
+            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
+            self.screen.blit(self.debug_surface, (0,0))
+            pygame.display.update()
             self.clock.tick(RUNNING_FPS)
 
+            
+
+        
         
     def running_timer(self):
         self.current_level_time += 1/RUNNING_FPS
@@ -444,11 +620,76 @@ class Game:
             self.show_enemy_count()
         self.display_CD_block()
         # print(self.player.air_time)
-        self.show_level_number()    
+        self.show_level_number()   
+
+        
+ 
+        
+
+    def update_debug_stuff(self):
+        
+        self.debug_surface = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
+        
+        currentFPS = f'FPS: {self.clock.get_fps():.0f}'
+        
+        
         
 
 
+        if self.show_debug_menu:
+
+            #display different variables
+
+            self.draw_text(currentFPS, self.debug_font, 'white', self.debug_surface, (self.debug_surface.get_width()-100, 0))
+
+            self.draw_text(f'self.level: {self.level}', self.debug_font, 'white', self.debug_surface, (0, 0))
+            self.draw_text(f'self.pause_menu_position: {self.pause_menu_position}', self.debug_font, 'white', self.debug_surface, (0, 25))
+            self.draw_text(f'self.transition: {self.transition}', self.debug_font, 'white', self.debug_surface, (0, 50))
+            self.draw_text(f'self.dead: {self.dead}', self.debug_font, 'white', self.debug_surface, (0, 75))
+            self.draw_text(f'self.restart_count: {self.restart_count}', self.debug_font, 'white', self.debug_surface, (0, 100))
+            self.draw_text(f'self.player_got_hit_count: {self.player_got_hit_count}', self.debug_font, 'white', self.debug_surface, (0, 125))
+            self.draw_text(f'self.total_time: {self.total_time}', self.debug_font, 'white', self.debug_surface, (0, 150))
+            self.draw_text(f'self.current_level_time: {self.current_level_time}', self.debug_font, 'white', self.debug_surface, (0, 175))
+            self.draw_text(f'self.player_name: {self.player_name}', self.debug_font, 'white', self.debug_surface, (0, 200))
+            self.draw_text(f'self.menu_float: {self.menu_float}', self.debug_font, 'white', self.debug_surface, (0, 225))
+            self.draw_text(f'self.player.pos: {self.player.pos}', self.debug_font, 'white', self.debug_surface, (0, 250))
+            self.draw_text(f'self.player.rect(): {self.player.rect()}', self.debug_font, 'white', self.debug_surface, (0, 275))
+            self.draw_text(f'self.player.air_time: {self.player.air_time}', self.debug_font, 'white', self.debug_surface, (0, 300))
+            self.draw_text(f'self.player.dashing: {self.player.dashing}', self.debug_font, 'white', self.debug_surface, (0, 325))
+            self.draw_text(f'self.player.big_jump_cd: {self.player.big_jump_cd}', self.debug_font, 'white', self.debug_surface, (0, 350))
+            self.draw_text(f'self.player.velocity: {self.player.velocity}', self.debug_font, 'white', self.debug_surface, (0, 375))
+
+            self.draw_text(f'self.player: {self.player}', self.debug_font, 'white', self.debug_surface, (0, 400)) 
+            self.draw_text(f'self.show_pause_menu: {self.show_pause_menu}', self.debug_font, 'white', self.debug_surface, (0, 425))
+            self.draw_text(f'self.button_selector_position: {self.button_selector_position}', self.debug_font, 'white', self.debug_surface, (0, 450))
+            self.draw_text(f'self.end_panel_pos: {self.end_panel_pos}', self.debug_font, 'white', self.debug_surface, (0, 475))
+            self.draw_text(f'len(self.enemies): {len(self.enemies)}', self.debug_font, 'white', self.debug_surface, (0, 500))
+            self.draw_text(f'self.screenshake: {self.screenshake}', self.debug_font, 'white', self.debug_surface, (0, 525))
+            self.draw_text(f'self.scroll: {self.scroll}', self.debug_font, 'white', self.debug_surface, (0, 550))
+            self.draw_text(f'self.render_scroll: {self.render_scroll}', self.debug_font, 'white', self.debug_surface, (0, 575))
+            self.draw_text(f'self.movement: {self.movement}', self.debug_font, 'white', self.debug_surface, (0, 600))
+            self.draw_text(f'self.end_panel_pos: {self.end_panel_pos}', self.debug_font, 'white', self.debug_surface, (0, 625))
+
+            
+
+            
+
+
+            
+
+
+            # self.display.blit(pygame.transform.scale(self.debug_surface, self.display.get_size()), (0,0))
+            self.debug_info_updated = True
+
+            
+            
+
+
+
+        
+        
     def EVERYTHING_render_update(self):
+        
         self.scroll_update()
         self.projectile_render_update()
         self.spark_particle_render_update()
@@ -457,13 +698,27 @@ class Game:
     
         self.tilemap.render(self.display, offset=self.render_scroll)
 
+        if self.in_main_menu:
+            self.render_main_menu_panel()
+            self.render_leaderboard()
+
         if not self.in_main_menu:
             self.displayUI_EVERYTHING()
         
 
         self.check_level_loading()
+
+
+        # Assuming you're measuring delta time each frame with dt
+
+    
         
-        # print(self.total_time)
+        self.update_debug_stuff()
+
+        
+
+        
+        
 
     
 
@@ -472,7 +727,7 @@ class Game:
         CD_fraction = dash_CD / 60
 
         big_jump_CD = self.player.get_big_jump_CD()
-        big_jump_CD_fraction = big_jump_CD / 300
+        big_jump_CD_fraction = big_jump_CD / 200
         # print(CD_fraction)
         # print(big_jump_CD)
 
@@ -533,6 +788,8 @@ class Game:
 
         
     def main_game(self):
+        self.GRANDTOTAL_COUNTER = 0
+        self.end_panel_pos = -self.assets['game_end_panel'].get_height()
         
         while True:
             for event in pygame.event.get():
@@ -551,21 +808,25 @@ class Game:
                         self.player.dash()
                     if event.key == pygame.K_ESCAPE:
                         # print('menu triggered')
-                        self.blurred = False
+                        
                         self.show_pause_menu = not self.show_pause_menu
                         self.ingame_menu()
-                    if event.key == pygame.K_e:
+                    if event.key == pygame.K_z:
                         if self.player.big_jump():
                             self.sfx['jump'].play()
                     if event.key == pygame.K_TAB:
                         print('bruh')
+                    if event.key == pygame.K_RETURN:
+                        if self.game_end:
+                            self.entire_game_reset()
+                            self.main_menu()
                         
                         
 
                         
                     
-                    if event.key == pygame.K_5:
-                        self.level = 5
+                    if event.key == pygame.K_7:
+                        self.level = 7
                         self.load_level(self.level)
                         self.reset_movement()
                         self.reset_player_status()
@@ -600,6 +861,7 @@ class Game:
             self.screenshake = max(0, self.screenshake - 1)
             self.screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
+            self.screen.blit(self.debug_surface, (0,0))
             pygame.display.update()
 
                         
@@ -635,6 +897,8 @@ class Game:
 
     def reset_player_status(self):
         self.show_pause_menu = False
+        #reset CD
+        self.player.big_jump_cd = 0
         self.HP = 3
 
     def global_stats_reset(self):
@@ -689,6 +953,8 @@ class Game:
         # Draw the text "Restart count:" and the associated count, below the arrow image
         self.draw_text(f'Restart count: {self.restart_count}', pygame.font.Font('minecraft.otf', 10), '#6b5153', status_menu, (stats_panel_x + 6, stats_panel_y + 72))
 
+        status_menu.blit(self.raw_assets['skeleton'], (stats_panel_x + 6, stats_panel_y + 92))
+
         #draw the button_selector onto the buttons according the variable self.button_selector
 
         #i want 
@@ -726,10 +992,6 @@ class Game:
                 self.button_selector_position = self.button_selector_target_position
 
 
-
-
-        
-
         # print(f'self.button_selector_position{self.button_selector_position}')
         
 
@@ -739,7 +1001,7 @@ class Game:
 
 
         # Draw skeleton image a bit below the second text
-        status_menu.blit(self.raw_assets['skeleton'], (stats_panel_x + 6, stats_panel_y + 92))
+        
 
 
 
@@ -753,7 +1015,7 @@ class Game:
 
     def ingame_menu(self):
 
-
+        self.screenshot_taken = False
         self.button_selector = 0
         self.menu_buttons = ['Resume', 'Restart', 'Options', 'Main Menu']
   
@@ -793,17 +1055,16 @@ class Game:
                             
 
                         elif self.menu_buttons[self.button_selector] == "Options":
-                            # Implement the Options functionality here
+                            self.show_debug_menu = not self.show_debug_menu
+                            print('debug menu show has been set to', self.show_debug_menu)
                             pass
                         elif self.menu_buttons[self.button_selector] == "Main Menu":
                             self.entire_game_reset()
                             
-                            self.in_main_menu = True
-                            
                             self.main_menu()
 
 
-            if not self.blurred:
+            if not self.screenshot_taken:
                 if self.pause_menu_position < -490:
                     pygame.image.save(self.display, 'screenshot.png')
                 OriImage = Image.open('screenshot.png')
@@ -815,15 +1076,17 @@ class Game:
                 blurImage.save('simBlurImage.png')
 
                 blurImageBG = pygame.image.load('simBlurImage.png')
-                self.blurred = True
+                self.screenshot_taken = True
             
             # self.display.blit(blurImageBG, [0, 0])
 
 
             
             self.display.blit(screenshot_no_blur, (0, 0))
+            
             self.render_pause_menu()
 
+            self.update_debug_stuff()
             # print(f'{self.button_selector} is selected')
 
             # self.mouse_pos = pygame.mouse.get_pos()
@@ -844,6 +1107,7 @@ class Game:
             # pygame.draw.circle(self.display, (255, 0, 0), (self.mouse_x, self.mouse_y), 5)
             
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
+            self.screen.blit(self.debug_surface, (0,0))
             pygame.display.update()
             self.clock.tick(RUNNING_FPS)
 
@@ -854,7 +1118,7 @@ class Game:
         if self.menu_buttons[self.button_selector] == "Leaderboard":
             target = self.leaderboard_target_position
         else:
-            target = leaderboard.get_width()+300
+            target = self.display_WIDTH-20
         
 
 
@@ -887,7 +1151,7 @@ class Game:
         sorted_data = sorted(data, key=lambda x: x["total time"])[:9]
 
         # Define a starting position for the entries
-        start_x = 52  # Adjust as needed
+        start_x = 35  # Adjust as needed
         start_y = 80  # Adjust as needed
 
         # Define a gap between entries for spacing
@@ -901,7 +1165,11 @@ class Game:
             total_time_seconds = entry['total time']
             #format the time into minutes and seconds
             if total_time_seconds >= 60:
-                total_time_formatted = f'{int(total_time_seconds//60)}:{round(total_time_seconds%60,1)}'
+                if total_time_seconds%60<10:
+                    total_time_formatted_seconds = f'0{int(total_time_seconds%60)}'
+                else:
+                    total_time_formatted_seconds = int(total_time_seconds%60)
+                total_time_formatted = f'{int(total_time_seconds//60)}:{total_time_formatted_seconds}'
             else:
                 total_time_formatted = total_time_seconds
 
@@ -922,8 +1190,58 @@ class Game:
         self.display.blit(leaderboard, (self.leaderboard_position, self.display_HEIGHT // 20 * 1 + self.menu_float))
 
 
+    def render_main_menu_panel(self):
+
+
+
+        self.main_menu_panel = self.assets['main_menu_buttons'].copy()
+
+
+        #the button selector starts at [74, 16], goes to [74,61], x stays the same, y has gap of 45
+
+        # Calculate the desired target based on the selected button:
+        self.main_menu_button_selector_target_position = 16 + self.button_selector * 45
+
+        #use easing function to make the button selector move smoothly, like above
+
+        difference = self.main_menu_button_selector_target_position - self.main_menu_button_selector_position
+        normalized_difference = abs(difference) / 45
+
+        if normalized_difference > 2:
+            self.button_selector_speed=20
+        else:
+            self.button_selector_speed=7
+
+        # If the normalized difference is out of bounds, correct it
+        if normalized_difference > 1:
+            normalized_difference = 1
+        elif normalized_difference < 0:
+            normalized_difference = 0
+
+        # Calculate progress using the easing function
+        progress = ease_out_quad(normalized_difference)
+
+        if difference > 0:
+            self.main_menu_button_selector_position += self.button_selector_speed * progress
+            if self.main_menu_button_selector_position > self.main_menu_button_selector_target_position:
+                self.main_menu_button_selector_position = self.main_menu_button_selector_target_position
+        else:
+            self.main_menu_button_selector_position -= self.button_selector_speed * progress
+            if self.main_menu_button_selector_position < self.main_menu_button_selector_target_position:
+                self.main_menu_button_selector_position = self.main_menu_button_selector_target_position
+
+
+
+
+        self.main_menu_panel.blit(self.assets['main_menu_button_selector'], (74, self.main_menu_button_selector_position))
+        self.display.blit(self.main_menu_panel, (self.display_WIDTH//20*1, self.display_HEIGHT//20*7+self.menu_float))
+
+
     def main_menu(self):
+        
+        self.game_finished = False
         self.in_main_menu = True
+        self.textflash = 0
 
         self.leaderboard_position = self.assets['leaderboard'].get_width()+self.display_WIDTH
         self.leaderboard_target_position = self.display_WIDTH // 20 * 15 - self.assets['leaderboard'].get_width() // 2
@@ -937,6 +1255,11 @@ class Game:
         self.menu_buttons = ["Start", "Options", "Leaderboard", "Quit"]
         self.button_selector = 0
 
+
+
+        self.main_menu_button_selector_position = 16  
+        self.main_menu_button_selector_target_position = 16  
+
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -945,9 +1268,11 @@ class Game:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_DOWN:
+                        self.sfx['jump'].play()
                         self.button_selector += 1
                         self.button_selector %= len(self.menu_buttons)
                     if event.key == pygame.K_UP:
+                        self.sfx['jump'].play()
                         self.button_selector -= 1
                         if self.button_selector < 0:
                             self.button_selector = len(self.menu_buttons)-1
@@ -965,8 +1290,8 @@ class Game:
                             # print(self.level)
                             
                         elif self.menu_buttons[self.button_selector] == "Options":
-                            # Implement the Options functionality here
-                            pass
+                            self.show_debug_menu = not self.show_debug_menu
+                            print('debug menu show has been set to', self.show_debug_menu)
                         elif self.menu_buttons[self.button_selector] == "Leaderboard":
                             # Implement the Leaderboard functionality here
                             pass
@@ -978,15 +1303,25 @@ class Game:
 
             # Rendering
             self.display.blit(self.assets['background'], (0, 0))
-            self.EVERYTHING_render_update()
+            
             self.refresh_menu_float()
-            self.render_leaderboard()
+            self.display.blit(self.assets['game_logo'], (self.display_WIDTH//20*1, self.display_HEIGHT//20*1+self.menu_float))  
+            
+            self.EVERYTHING_render_update()
+            
+            
+
+
+
+            #blit main_menu_button
+            
 
             self.movement[1] = 0.8
-
             
             
-            self.display.blit(self.assets['game_logo'], (self.display_WIDTH//20*1, self.display_HEIGHT//20*1+self.menu_float))  
+            
+            
+            
 
             self.draw_text('Made By Dyrox2333', pygame.font.Font('minecraft.otf', 10), 'black', self.display, (self.display_WIDTH//20*19.5-self.font.size('Made By Dyrox2333')[0]//2+1, self.display_HEIGHT//20*19.5-self.font.size('Made By Dyrox2333')[1]//2+1))
             self.draw_text('Made By Dyrox2333', pygame.font.Font('minecraft.otf', 10), 'white', self.display, (self.display_WIDTH//20*19.5-self.font.size('Made By Dyrox2333')[0]//2, self.display_HEIGHT//20*19.5-self.font.size('Made By Dyrox2333')[1]//2))
@@ -995,15 +1330,17 @@ class Game:
             
                 
             # Drawing buttons, buttons are on the left column, beneth the game logo, with 50px gap between each button
-            button_font = pygame.font.Font('minecraft.otf', 20)
-            for idx, button_text in enumerate(self.menu_buttons):
-                color = (255, 0, 0) if idx == self.button_selector else (255, 255, 255)
-                button_surface = button_font.render(button_text, True, color)
-                button_rect = button_surface.get_rect(center=(self.display_WIDTH//20*5.5, self.display_HEIGHT/2 + idx*30))
-                self.display.blit(button_surface, button_rect)
+            # button_font = pygame.font.Font('minecraft.otf', 20)
+            # for idx, button_text in enumerate(self.menu_buttons):
+            #     color = (255, 0, 0) if idx == self.button_selector else (255, 255, 255)
+            #     button_surface = button_font.render(button_text, True, color)
+            #     button_rect = button_surface.get_rect(center=(self.display_WIDTH//20*5.5, self.display_HEIGHT/2 + idx*30))
+            #     self.display.blit(button_surface, button_rect)
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
 
+
+            self.screen.blit(self.debug_surface, (0,0))
             pygame.display.flip()
             self.clock.tick(RUNNING_FPS)
      

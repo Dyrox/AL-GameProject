@@ -20,7 +20,7 @@ class Editor:
         self.screen = pygame.display.set_mode(window_size)
         self.display = pygame.Surface((640,360))
         self.clock = pygame.time.Clock() 
-        
+        self.speed = 1
         self.assets = {
             'decor': load_images('tiles/decor'),
             'grass': load_images('tiles/grass'),
@@ -34,7 +34,7 @@ class Editor:
         self.tilemap = Tilemap(self, tile_size=16)
         
         # Load the tilemap
-        self.file_path = 'data/maps/main_menu_map.json'
+        self.file_path = 'data/maps/6.json'
         if self.file_path:
             try:
                 self.tilemap.load(self.file_path)
@@ -125,13 +125,13 @@ class Editor:
                         
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_a:
-                        self.movement[0] = True
+                        self.movement[0] = self.speed
                     if event.key == pygame.K_d:
-                        self.movement[1] = True
+                        self.movement[1] = self.speed
                     if event.key == pygame.K_w:
-                        self.movement[2] = True
+                        self.movement[2] = self.speed
                     if event.key == pygame.K_s:
-                        self.movement[3] = True
+                        self.movement[3] = self.speed
                     if event.key == pygame.K_g:
                         self.ongrid = not self.ongrid
                     if event.key == pygame.K_t:
@@ -140,6 +140,10 @@ class Editor:
                         self.tilemap.save(self.file_path)
                     if event.key == pygame.K_LSHIFT:
                         self.shift = True
+                    if event.key == pygame.K_j:
+                        self.speed = 5
+                    if event.key == pygame.K_k:
+                        self.speed = 1
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
                         self.movement[0] = False
@@ -151,7 +155,37 @@ class Editor:
                         self.movement[3] = False
                     if event.key == pygame.K_LSHIFT:
                         self.shift = False
+
             
+            #write text: tile type
+            font = pygame.font.SysFont('Arial', 20)
+            text = font.render(self.tile_list[self.tile_group], True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height()))
+            #write text: o to save
+            text = font.render('o to save', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height()))
+            #write text: g to toggle grid
+            text = font.render('g to toggle grid', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 2))
+            #write text: t to autotile
+            text = font.render('t to autotile', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 3))
+            #write text: j to speed up
+            text = font.render('j to speed up', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 4))
+            #write text: k to slow down
+            text = font.render('k to slow down', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 5))
+            #write text: shift + scroll to change variant
+            text = font.render('shift + scroll to change variant', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 6))
+            #write text: a/d/w/s to move
+            text = font.render('a/d/w/s to move', True, (255, 255, 255))
+            self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 7))
+
+
+            
+
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()
             self.clock.tick(60)
