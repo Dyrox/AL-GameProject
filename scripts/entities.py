@@ -146,7 +146,7 @@ class Player(PhysicsEntity):
         self.wall_slide = False
         self.dashing = 0
         self.big_jump_cd = 0  # Initial cooldown is 0 (available to use)
-        self.big_jump_max_cd = 200  # Example: 5 seconds (assuming 60 frames per second
+        self.big_jump_max_cd = 120  # Example: 5 seconds (assuming 60 frames per second
     
     def get_dash_CD(self):
         return 60 - abs(self.dashing)
