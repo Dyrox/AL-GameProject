@@ -5,7 +5,6 @@ import os
 import datetime
 import json
 import pygame
-import cProfile
 
 from PIL import Image, ImageFilter, ImageEnhance
 
@@ -172,9 +171,9 @@ class Game:
         self.end_panel_pos = -self.assets['game_end_panel'].get_height()
         self.end_panel_target_pos = (self.display_HEIGHT - self.assets['game_end_panel'].get_height()) // 2
 
-        # if data/leaderboard.json doesnt exist, create a blank json file
-        if not os.path.exists('data/leaderboard.json'):
-            with open('data/leaderboard.json', 'w') as f:
+        # if data/player_records.json doesnt exist, create a blank json file
+        if not os.path.exists('data/player_records.json'):
+            with open('data/player_records.json', 'w') as f:
                 f.write('[]')
 
         for i in range(self.HP):
@@ -497,7 +496,7 @@ class Game:
         }
 
         # Proper way to update the JSON file
-        with open('data/leaderboard.json', 'r') as f:
+        with open('data/player_records.json', 'r') as f:
             try:
                 data = json.load(f)
             except json.decoder.JSONDecodeError:  # In case the file is empty or has invalid JSON format
@@ -505,7 +504,7 @@ class Game:
 
         data.append(player_record_entry)
 
-        with open('data/leaderboard.json', 'w') as f:
+        with open('data/player_records.json', 'w') as f:
             json.dump(data, f, indent=4)
 
         while True:
@@ -847,8 +846,7 @@ class Game:
             text_rect = text_surf.get_rect(center=button_rect.center)
             self.display.blit(text_surf, text_rect)
 
-    def help_page(self):
-        pass
+        
 
     def refresh_menu_float(self):
         self.x += 0.05
@@ -1086,7 +1084,7 @@ class Game:
             if self.leaderboard_position < target:
                 self.leaderboard_position = target
 
-        with open("data/leaderboard.json", "r") as f:
+        with open("data/player_records.json", "r") as f:
             data = json.load(f)
 
         # 2. Select the Best 9 Entries
@@ -1111,7 +1109,9 @@ class Game:
                     total_time_formatted_seconds = f'0{int(total_time_seconds % 60)}'
                 else:
                     total_time_formatted_seconds = int(total_time_seconds % 60)
-                total_time_formatted = f'{int(total_time_seconds // 60)}:{total_time_formatted_seconds}'
+                fraction_part = round(total_time_seconds - int(total_time_seconds),1)
+                fraction_part = str(fraction_part)[2:]
+                total_time_formatted = f'{int(total_time_seconds // 60)}:{total_time_formatted_seconds}.{fraction_part}'
             else:
                 total_time_formatted = total_time_seconds
 

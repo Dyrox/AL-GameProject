@@ -16,7 +16,7 @@ class Editor:
 
         window_size = (1280, 720)
         self.screen = pygame.display.set_mode(window_size)
-        self.display = pygame.Surface((640, 360))
+        self.display = pygame.Surface((1280, 720))
         self.clock = pygame.time.Clock()
         self.speed = 1
         self.assets = {
@@ -32,7 +32,7 @@ class Editor:
         self.tilemap = Tilemap(self, tile_size=16)
 
         # Load the tilemap
-        self.file_path = 'data/maps/2.json'
+        self.file_path = 'data/maps/main_menu_map.json'
         if self.file_path:
             try:
                 self.tilemap.load(self.file_path)
@@ -186,6 +186,12 @@ class Editor:
             # write text: a/d/w/s to move
             text = font.render('a/d/w/s to move', True, (255, 255, 255))
             self.display.blit(text, (5, 5 + current_tile_img.get_height() + text.get_height() * 7))
+ 
+            #show level name on the top right
+            text = font.render(self.file_path, True, (255, 255, 255))
+            self.display.blit(text, (self.display.get_width() - text.get_width() - 5, 5))
+
+
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()

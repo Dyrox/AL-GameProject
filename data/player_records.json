@@ -1,0 +1,26 @@
+[
+    {
+        "player name": "jiba",
+        "total time": 380.0,
+        "raw time": 334.96667,
+        "got hit count": 15,
+        "restart count": 15,
+        "completed datetime": "2023-09-25 @ 15:49"
+    },
+    {
+        "player name": "dyrox",
+        "total time": 172.6,
+        "raw time": 154.58333,
+        "got hit count": 3,
+        "restart count": 3,
+        "completed datetime": "2023-09-25 @ 15:53"
+    },
+    {
+        "player name": "rshen",
+        "total time": 320.5,
+        "raw time": 285.46667,
+        "got hit count": 10,
+        "restart count": 10,
+        "completed datetime": "2023-09-25 @ 16:15"
+    }
+]
