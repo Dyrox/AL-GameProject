@@ -21,7 +21,6 @@ RUNNING_FPS = 60
 
 # DISPLAYING_FPS = 120
 
-
 class Game:
     def __init__(self):
         self.player_name = input('enter your name:')
@@ -59,12 +58,10 @@ class Game:
                     pygame.K_5: 5,
                     pygame.K_6: 6,
                     pygame.K_7: 7,
-                    # ... add more keys as needed
                 }
 
         # Debug variables
         self.debug_timer = 0
-        #use jetbrains mono font
         self.debug_font = pygame.font.Font(None, 30)
         self.debug_info_updated = False
         self.GRANDTOTAL_COUNTER = 0
@@ -130,10 +127,6 @@ class Game:
             'shoot': pygame.mixer.Sound('data/sfx/shoot.wav'),
             'hit': pygame.mixer.Sound('data/sfx/hit.wav'),
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
-            'chord1': pygame.mixer.Sound('data/sfx/chord1.wav'),
-            'chord2': pygame.mixer.Sound('data/sfx/chord2.wav'),
-            'chord3': pygame.mixer.Sound('data/sfx/chord3.wav'),
-            'chord4': pygame.mixer.Sound('data/sfx/chord4.wav'),
         }
 
         self.HP = 3
@@ -367,7 +360,6 @@ class Game:
         difference = target - self.end_panel_pos
         normalized_difference = abs(difference) / game_end_panel.get_width()
 
-        # If the normalized difference is out of bounds, correct it
         if normalized_difference > 1:
             normalized_difference = 1
         elif normalized_difference < 0:
@@ -601,7 +593,7 @@ class Game:
             self.running_timer()
             self.show_enemy_count()
         self.display_CD_block()
-        # print(self.player.air_time)
+    
         self.show_level_number()
 
     def update_debug_stuff(self):
@@ -824,29 +816,6 @@ class Game:
 
             self.clock.tick(RUNNING_FPS)
 
-    def draw_buttons(self):
-        button_width = 150
-        button_height = 50
-        button_gap = 10
-        start_y = 100
-
-        for index, button_text in enumerate(self.menu_buttons):
-            button_rect = pygame.Rect((self.display.get_width() - button_width) // 2,
-                                      start_y + index * (button_height + button_gap) + self.menu_float, button_width,
-                                      button_height)
-
-            # Highlight the button if it's selected
-            if index == self.button_selector:
-                pygame.draw.rect(self.display, (255, 255, 0), button_rect)
-            else:
-                pygame.draw.rect(self.display, (255, 255, 255), button_rect)
-
-            # Draw button text
-            text_surf = pygame.font.Font('minecraft.otf', 20).render(button_text, True, (0, 0, 0))
-            text_rect = text_surf.get_rect(center=button_rect.center)
-            self.display.blit(text_surf, text_rect)
-
-        
 
     def refresh_menu_float(self):
         self.x += 0.05
@@ -897,8 +866,6 @@ class Game:
         self.playermodel.animate(pygame.time.get_ticks())
         self.playermodel.draw(status_menu)
 
-        # add a stats section, on the right hand side of the stats menu, with the following stats:self.player_got_hit_count, self.restart_count
-        # the name box is a 128x26 box with top left at 44,7. The name is centered in the box, use self.player_name and the size to position it correctly
         self.draw_text(self.player_name, (font := pygame.font.Font('minecraft.otf', 20)), 'black', status_menu,
                        (108 - font.size(self.player_name)[0] // 2 + 1, 20 - font.size(self.player_name)[1] // 2 + 1))
         self.draw_text(self.player_name, (font := pygame.font.Font('minecraft.otf', 20)), 'white', status_menu,
@@ -921,10 +888,6 @@ class Game:
 
         # draw the button_selector onto the buttons according the variable self.button_selector
 
-        # i want
-        # Calculate the desired target based on the selected button:
-        # Calculate the desired target based on the selected button:
-        # Calculate the desired target based on the selected button:
         self.button_selector_target_position = 69 + self.button_selector * 51
 
         difference = self.button_selector_target_position - self.button_selector_position
@@ -1045,9 +1008,6 @@ class Game:
 
             self.refresh_menu_float()
 
-            # self.draw_buttons()
-            # print(f'self.button_selector{self.button_selector}')
-            # pygame.draw.circle(self.display, (255, 0, 0), (self.mouse_x, self.mouse_y), 5)
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
             if self.show_debug_menu:
@@ -1125,22 +1085,15 @@ class Game:
 
             leaderboard.blit(text_surface, text_rect)
 
-        #
 
-        # leaderboard.blit()
         # BLIT IMAGE of LEADERBOARD , on the right-hand side with updated position
         self.display.blit(leaderboard, (self.leaderboard_position, self.display_HEIGHT // 20 * 1 + self.menu_float))
 
     def render_main_menu_panel(self):
 
         self.main_menu_panel = self.assets['main_menu_buttons'].copy()
-
-        # the button selector starts at [74, 16], goes to [74,61], x stays the same, y has gap of 45
-
-        # Calculate the desired target based on the selected button:
         self.main_menu_button_selector_target_position = 16 + self.button_selector * 45
 
-        # use easing function to make the button selector move smoothly, like above
 
         difference = self.main_menu_button_selector_target_position - self.main_menu_button_selector_position
         normalized_difference = abs(difference) / 45
@@ -1243,7 +1196,6 @@ class Game:
 
             self.EVERYTHING_render_update()
 
-            # blit main_menu_button
 
             self.movement[1] = 0.8
 
@@ -1254,16 +1206,6 @@ class Game:
                 self.display_WIDTH // 20 * 19.5 - self.font.size('Made By Dyrox2333')[0] // 2,
                 self.display_HEIGHT // 20 * 19.5 - self.font.size('Made By Dyrox2333')[1] // 2))
 
-            # BLIT IMAGE ofLEADERBOARD  , on the right hand side
-
-            # Drawing buttons, buttons are on the left column, beneth the game logo, with 50px gap between each button
-            # button_font = pygame.font.Font('minecraft.otf', 20)
-            # for idx, button_text in enumerate(self.menu_buttons):
-            #     color = (255, 0, 0) if idx == self.button_selector else (255, 255, 255)
-            #     button_surface = button_font.render(button_text, True, color)
-            #     button_rect = button_surface.get_rect(center=(self.display_WIDTH//20*5.5, self.display_HEIGHT/2 + idx*30))
-            #     self.display.blit(button_surface, button_rect)
-
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
 
             if self.show_debug_menu:
@@ -1273,7 +1215,3 @@ class Game:
 
 
 Game().main_menu()
-
-
-
-

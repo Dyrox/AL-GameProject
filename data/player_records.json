@@ -8,7 +8,7 @@
         "completed datetime": "2023-09-25 @ 15:49"
     },
     {
-        "player name": "dyrox",
+        "player name": "Dyrox",
         "total time": 172.6,
         "raw time": 154.58333,
         "got hit count": 3,
@@ -22,5 +22,69 @@
         "got hit count": 10,
         "restart count": 10,
         "completed datetime": "2023-09-25 @ 16:15"
+    },
+    {
+        "player name": "mjanmarski_davez",
+        "total time": 347.7,
+        "raw time": 317.68333,
+        "got hit count": 10,
+        "restart count": 10,
+        "completed datetime": "2023-10-01 @ 20:18"
+    },
+    {
+        "player name": "mjanmarski_davez_2",
+        "total time": 242.1,
+        "raw time": 207.15,
+        "got hit count": 15,
+        "restart count": 15,
+        "completed datetime": "2023-10-01 @ 20:23"
+    },
+    {
+        "player name": "Dyrox2",
+        "total time": 151.3,
+        "raw time": 145.33333,
+        "got hit count": 1,
+        "restart count": 1,
+        "completed datetime": "2023-10-02 @ 10:39"
+    },
+    {
+        "player name": "paris man",
+        "total time": 275.4,
+        "raw time": 264.43333,
+        "got hit count": 6,
+        "restart count": 6,
+        "completed datetime": "2023-10-03 @ 12:49"
+    },
+    {
+        "player name": "Dyrox3",
+        "total time": 168.3,
+        "raw time": 158.26667,
+        "got hit count": 5,
+        "restart count": 5,
+        "completed datetime": "2023-10-03 @ 12:54"
+    },
+    {
+        "player name": "warcomong",
+        "total time": 267.7,
+        "raw time": 250.75,
+        "got hit count": 7,
+        "restart count": 7,
+        "completed datetime": "2023-10-03 @ 13:04"
+    },
+    {
+        "player name": "6lits6_2",
+        "total time": 360.4,
+        "raw time": 317.43333,
+        "got hit count": 8,
+        "restart count": 8,
+        "completed datetime": "2023-10-03 @ 16:09"
+    },
+    {
+        "player name": "6lits6",
+        "total time": 234.4,
+        "raw time": 224.38333,
+        "got hit count": 5,
+        "restart count": 5,
+        "completed datetime": "2023-10-03 @ 16:14"
     }
 ]

@@ -14,9 +14,9 @@ class Editor:
         pygame.init()
         pygame.display.set_caption('editor')
 
-        window_size = (1280, 720)
+        window_size = (1280,720)
         self.screen = pygame.display.set_mode(window_size)
-        self.display = pygame.Surface((1280, 720))
+        self.display = pygame.Surface((640,360))
         self.clock = pygame.time.Clock()
         self.speed = 1
         self.assets = {
@@ -31,8 +31,8 @@ class Editor:
 
         self.tilemap = Tilemap(self, tile_size=16)
 
-        # Load the tilemap
-        self.file_path = 'data/maps/main_menu_map.json'
+        map_name = input("Map name: ")
+        self.file_path = f'data/maps/{map_name}.json'
         if self.file_path:
             try:
                 self.tilemap.load(self.file_path)
@@ -52,6 +52,11 @@ class Editor:
         self.right_clicking = False
         self.shift = False
         self.ongrid = True
+
+    
+    def take_screen_shot(self):
+        pygame.image.save(self.display, 'editorscreenshot.png')
+        print("Screenshot saved!")
 
     def run(self):
 
@@ -160,6 +165,9 @@ class Editor:
                         self.movement[3] = False
                     if event.key == pygame.K_LSHIFT:
                         self.shift = False
+
+                    if event.key == pygame.K_u:
+                        self.take_screen_shot()
 
             # write text: tile type
             font = pygame.font.SysFont('Arial', 20)
