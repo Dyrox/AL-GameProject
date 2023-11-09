@@ -40,13 +40,15 @@ class Animation:
     
 def APPLE_FILE_CLEAR():
     for dirpath, dirnames, filenames in os.walk('.'):
-        if '.DS_Store' in filenames:
-            file_path = os.path.join(dirpath, '.DS_Store')
-            try:
-                os.remove(file_path)
-                print(f"Removed {file_path}")
-            except Exception as e:
-                print(f"Error removing {file_path}: {e}")
+        for filename in filenames:
+            if filename in ('.DS_Store', 'Thumbs.db'):
+                file_path = os.path.join(dirpath, filename)
+                if os.path.isfile(file_path):  # Check if the file exists
+                    try:
+                        os.remove(file_path)
+                        print(f"Removed {file_path}")
+                    except Exception as e:
+                        print(f"Error removing {file_path}: {e}")
 
 def ease_out_quad(t):
     """Quadratic easing out - decelerating to zero velocity."""

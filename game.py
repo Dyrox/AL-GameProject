@@ -670,6 +670,7 @@ class Game:
         self.tilemap.render(self.display, offset=self.render_scroll)
 
         if self.in_main_menu:
+            
             self.render_main_menu_panel()
             self.render_leaderboard()
 
