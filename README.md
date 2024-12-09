@@ -2,6 +2,9 @@
 
 A platformer game developed for my A-Level Computer Science project, built using the 🎮 [Pygame](https://www.pygame.org/news) engine.
 
+Full Devlog available Here - [📄 Download the PDF](./devlog.pdf) 
+(download to view, webview won't render properly as it has 200+ pages)
+
 - [Overview](#overview)
 - [Screenshots](#screenshots)
   - [Main Menu & Leaderboard](#main-menu--leaderboard)
@@ -12,7 +15,6 @@ A platformer game developed for my A-Level Computer Science project, built using
 ## Overview
 Heavily inspired by 📺 [this Pygame tutorial](https://www.youtube.com/watch?v=2gABYM5M0ww) from DaFluffyPotato. Has support for a leaderboard, keyboard control and smooth inputs. 
 
-Full Devlog available Here - [📄 View the PDF.](./devlog.pdf)
 
 
 ## Screenshots
