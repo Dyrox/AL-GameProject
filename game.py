@@ -19,6 +19,7 @@ from scripts.object import ObjectAnimation
 RUNNING_FPS = 60
 
 
+
 # DISPLAYING_FPS = 120
 
 class Game:
@@ -29,9 +30,9 @@ class Game:
         APPLE_FILE_CLEAR()
         self.x = 0
 
-        pygame.display.set_caption('My game')
+        pygame.display.set_caption('A-Level Project')
         self.window_size = (1280, 720)
-        # self.window_size = (1920, 1080)
+        # self.window_size = (1600,900)
         self.screen = pygame.display.set_mode(self.window_size)
         self.display = pygame.Surface((640, 360), pygame.SRCALPHA)
         self.show_debug_menu = False
@@ -353,7 +354,6 @@ class Game:
     def render_end_game_panel(self):
 
         game_end_panel = self.assets['game_end_panel'].copy()
-        print('rendering end game panel')
 
         target = self.end_panel_target_pos
 
@@ -774,7 +774,6 @@ class Game:
                         self.player.dash()
                     if event.key == pygame.K_ESCAPE:
                         # print('menu triggered')
-
                         self.show_pause_menu = not self.show_pause_menu
                         self.ingame_menu()
                     if event.key == pygame.K_z:
@@ -821,7 +820,7 @@ class Game:
     def refresh_menu_float(self):
         self.x += 0.05
         self.x %= math.pi * 2
-        self.menu_float = 5 * math.sin(self.x)
+        self.menu_float = 7 * math.sin(self.x)
 
     def reset_player_status(self):
         self.show_pause_menu = False
@@ -970,7 +969,6 @@ class Game:
 
                             self.restart_level()
 
-
                         elif self.menu_buttons[self.button_selector] == "Options":
                             self.show_debug_menu = not self.show_debug_menu
                             print('debug menu show has been set to', self.show_debug_menu)
@@ -1009,7 +1007,7 @@ class Game:
 
             self.refresh_menu_float()
 
-
+            
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), self.screenshake_offset)
             if self.show_debug_menu:
                 self.screen.blit(self.debug_surface, (0, 0))

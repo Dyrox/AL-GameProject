@@ -86,5 +86,13 @@
         "got hit count": 5,
         "restart count": 5,
         "completed datetime": "2023-10-03 @ 16:14"
+    },
+    {
+        "player name": "THT",
+        "total time": 317.5,
+        "raw time": 282.5,
+        "got hit count": 10,
+        "restart count": 10,
+        "completed datetime": "2023-12-09 @ 17:03"
     }
 ]

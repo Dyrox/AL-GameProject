@@ -39,7 +39,7 @@ class Animation:
         return self.images[int(self.frame / self.img_duration)]
     
 def APPLE_FILE_CLEAR():
-    for dirpath, dirnames, filenames in os.walk('.'):
+    for dirpath, dirnames, filenames in os.walk('./data'):
         for filename in filenames:
             if filename in ('.DS_Store', 'Thumbs.db'):
                 file_path = os.path.join(dirpath, filename)

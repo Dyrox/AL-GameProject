@@ -12,7 +12,7 @@ A platformer game developed for my A-Level Computer Science project, built using
 ## Overview
 Heavily inspired by 📺 [this Pygame tutorial](https://www.youtube.com/watch?v=2gABYM5M0ww) from DaFluffyPotato. Has support for a leaderboard, keyboard control and smooth inputs. 
 
-Full Devlog available Here - [View the PDF.](https://github.com/your-username/your-repo-name/blob/main/path-to-your-file.pdf)
+Full Devlog available Here - [📄 View the PDF.](./devlog.pdf)
 
 
 ## Screenshots

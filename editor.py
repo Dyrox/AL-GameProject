@@ -170,7 +170,7 @@ class Editor:
                         self.take_screen_shot()
 
             # write text: tile type
-            font = pygame.font.SysFont('Arial', 20)
+            font = pygame.font.Font('minecraft.otf', 10)
             text = font.render(self.tile_list[self.tile_group], True, (255, 255, 255))
             self.display.blit(text, (5, 5 + current_tile_img.get_height()))
             # write text: o to save
