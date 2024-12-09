@@ -1,4 +1,4 @@
-# CS-Project-2
+# AL-GameProject
 
 A platformer game developed for my A-Level Computer Science project, built using the 🎮 [Pygame](https://www.pygame.org/news) engine.
 
